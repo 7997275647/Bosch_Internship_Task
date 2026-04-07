@@ -1,0 +1,60 @@
+name: Build RISC-V Firmware
+
+on:
+  push:
+    branches: [ main, master, dev ]
+  pull_request:
+    branches: [ main, master, dev ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+
+    - name: Install RISC-V toolchain
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-riscv64-unknown-elf
+        # Create symlinks to provide riscv-none-elf- prefix
+        sudo ln -sf /usr/bin/riscv64-unknown-elf-gcc /usr/bin/riscv-none-elf-gcc
+        sudo ln -sf /usr/bin/riscv64-unknown-elf-as /usr/bin/riscv-none-elf-as
+        sudo ln -sf /usr/bin/riscv64-unknown-elf-ld /usr/bin/riscv-none-elf-ld
+        sudo ln -sf /usr/bin/riscv64-unknown-elf-objdump /usr/bin/riscv-none-elf-objdump
+
+    - name: Verify toolchain installation
+      run: |
+        riscv-none-elf-gcc --version
+        riscv-none-elf-as --version
+        riscv-none-elf-ld --version
+
+    - name: Build firmware
+      run: make
+
+    - name: Check build artifacts
+      run: |
+        ls -lh build/
+        file build/firmware.elf
+
+    - name: Generate disassembly
+      run: riscv-none-elf-objdump -d build/firmware.elf > build/firmware.dump
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: firmware
+        path: build/
+        retention-days: 30
+
+    - name: Display build summary
+      run: |
+        echo "=== Build Summary ==="
+        echo "Firmware ELF: $(ls -lh build/firmware.elf | awk '{print $5}')"
+        echo "Load address: 0x00000000"
+        echo "Magic address: 0x90000000 (console output)"
+        echo ""
+        echo "=== Entry Instructions ==="
+        riscv-none-elf-objdump -d build/firmware.elf | grep -A 5 "<_start>:" || true
