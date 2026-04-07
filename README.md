@@ -1,6 +1,6 @@
 # RISC-V Bare-Metal Hello World - Quick Start
 
-Minimal bare-metal firmware for RISC-V RV32I that prints "hello" to a memory-mapped console.
+Minimal bare-metal firmware for RISC-V that prints "hello" to a memory-mapped console.
 
 ## Setup
 
